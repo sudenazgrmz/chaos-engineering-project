@@ -1,0 +1,57 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Workflow
+metadata:
+  name: disaster-simulation
+  namespace: chaos-demo
+spec:
+  entry: main-entry
+  templates:
+    - name: main-entry
+      templateType: Serial
+      deadline: "300s"
+      children:
+        - network-delay-step
+        - pod-kill-step
+        - stress-step
+
+    - name: network-delay-step
+      templateType: NetworkChaos
+      deadline: "60s"
+      networkChaos:
+        action: delay
+        mode: all
+        selector:
+          labelSelectors:
+            app: frontend
+        delay:
+          latency: "2000ms"
+          jitter: "100ms"
+        direction: to
+        target:
+          mode: all   # <-- BURAYA EKLENDİ (zorunlu)
+          selector:
+            labelSelectors:
+              app: backend
+
+    - name: pod-kill-step
+      templateType: PodChaos
+      deadline: "60s"
+      podChaos:
+        action: pod-kill
+        mode: one
+        selector:
+          labelSelectors:
+            app: backend
+
+    - name: stress-step
+      templateType: StressChaos
+      deadline: "120s"
+      stressChaos:
+        mode: all
+        selector:
+          labelSelectors:
+            app: backend
+        stressors:
+          cpu:
+            workers: 2
+            load: 80

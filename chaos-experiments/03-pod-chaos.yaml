@@ -1,0 +1,89 @@
+# Pod Chaos Experiments
+# Kill pods, containers, or inject pod failures
+
+---
+# Pod Kill - Kill random backend pod
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: pod-kill-backend
+  namespace: chaos-demo
+spec:
+  action: pod-kill
+  mode: one                   # Kill one random pod
+  selector:
+    namespaces:
+      - chaos-demo
+    labelSelectors:
+      app: backend
+  duration: "30s"             # Duration before pod is killed
+---
+# Pod Kill - Kill 50% of backend pods
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: pod-kill-backend-half
+  namespace: chaos-demo
+spec:
+  action: pod-kill
+  mode: fixed-percent
+  value: "50"                 # Kill 50% of matching pods
+  selector:
+    namespaces:
+      - chaos-demo
+    labelSelectors:
+      app: backend
+---
+# Pod Failure - Make pod fail without killing
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: pod-failure-experiment
+  namespace: chaos-demo
+spec:
+  action: pod-failure
+  mode: one
+  selector:
+    namespaces:
+      - chaos-demo
+    labelSelectors:
+      app: backend
+  duration: "2m"              # Pod will fail for 2 minutes
+---
+# Container Kill - Kill specific container
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: container-kill-backend
+  namespace: chaos-demo
+spec:
+  action: container-kill
+  mode: all
+  containerNames:
+    - backend                 # Container name to kill
+  selector:
+    namespaces:
+      - chaos-demo
+    labelSelectors:
+      app: backend
+  duration: "1m"
+---
+# Scheduled Pod Kill - Periodic chaos
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Schedule
+metadata:
+  name: scheduled-pod-kill
+  namespace: chaos-demo
+spec:
+  schedule: "*/5 * * * *"     # Every 5 minutes
+  type: PodChaos
+  historyLimit: 5
+  concurrencyPolicy: Forbid
+  podChaos:
+    action: pod-kill
+    mode: one
+    selector:
+      namespaces:
+        - chaos-demo
+      labelSelectors:
+        app: backend

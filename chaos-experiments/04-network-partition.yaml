@@ -1,0 +1,135 @@
+# Network Partition and Packet Loss Experiments
+
+---
+# Network Partition - Completely isolate backend from frontend
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: network-partition
+  namespace: chaos-demo
+spec:
+  action: partition
+  mode: all
+  selector:
+    namespaces:
+      - chaos-demo
+    labelSelectors:
+      app: frontend
+  direction: both             # Block traffic in both directions
+  target:
+    selector:
+      namespaces:
+        - chaos-demo
+      labelSelectors:
+        app: backend
+    mode: all
+  duration: "2m"
+---
+# Packet Loss - Drop 30% of packets
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: network-packet-loss
+  namespace: chaos-demo
+spec:
+  action: loss
+  mode: all
+  selector:
+    namespaces:
+      - chaos-demo
+    labelSelectors:
+      app: frontend
+  loss:
+    loss: "30"                # 30% packet loss
+    correlation: "25"         # 25% correlation between losses
+  direction: to
+  target:
+    selector:
+      namespaces:
+        - chaos-demo
+      labelSelectors:
+        app: backend
+    mode: all
+  duration: "3m"
+---
+# Packet Corruption
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: network-corrupt
+  namespace: chaos-demo
+spec:
+  action: corrupt
+  mode: all
+  selector:
+    namespaces:
+      - chaos-demo
+    labelSelectors:
+      app: frontend
+  corrupt:
+    corrupt: "10"             # 10% packet corruption
+    correlation: "25"
+  direction: to
+  target:
+    selector:
+      namespaces:
+        - chaos-demo
+      labelSelectors:
+        app: backend
+    mode: all
+  duration: "3m"
+---
+# Packet Duplication
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: network-duplicate
+  namespace: chaos-demo
+spec:
+  action: duplicate
+  mode: all
+  selector:
+    namespaces:
+      - chaos-demo
+    labelSelectors:
+      app: frontend
+  duplicate:
+    duplicate: "20"           # 20% packet duplication
+    correlation: "25"
+  direction: to
+  target:
+    selector:
+      namespaces:
+        - chaos-demo
+      labelSelectors:
+        app: backend
+    mode: all
+  duration: "3m"
+---
+# Packet Reorder
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: network-reorder
+  namespace: chaos-demo
+spec:
+  action: reorder
+  mode: all
+  selector:
+    namespaces:
+      - chaos-demo
+    labelSelectors:
+        app: frontend
+  reorder:
+    reorder: "50"             # 50% of packets reordered
+    correlation: "25"
+    gap: 5                    # Reorder gap
+  direction: to
+  target:
+    selector:
+      namespaces:
+        - chaos-demo
+      labelSelectors:
+        app: backend
+    mode: all
+  duration: "3m"

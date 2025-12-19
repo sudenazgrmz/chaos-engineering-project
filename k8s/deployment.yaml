@@ -1,0 +1,141 @@
+# Namespace for chaos experiments
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: chaos-demo
+  labels:
+    app: chaos-demo
+---
+# Frontend Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: chaos-demo
+  labels:
+    app: frontend
+    tier: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      annotations:
+        # HTTPChaos çalışması için bu satır kritik!
+        chaos-mesh.org/inject: "true"
+      labels:
+        app: frontend
+        tier: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: chaos-demo:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5000
+        env:
+        - name: APP_TYPE
+          value: "frontend"
+        - name: BACKEND_SERVICE
+          value: "http://backend-service:5001"
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 5
+          periodSeconds: 3
+---
+# Frontend Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: chaos-demo
+spec:
+  selector:
+    app: frontend
+  ports:
+  - port: 5000
+    targetPort: 5000
+  type: ClusterIP
+---
+# Backend Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: chaos-demo
+  labels:
+    app: backend
+    tier: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      annotations:
+        # Backend için de kaos enjeksiyonunu aktif ediyoruz
+        chaos-mesh.org/inject: "true"
+      labels:
+        app: backend
+        tier: backend
+    spec:
+      containers:
+      - name: backend
+        image: chaos-demo:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5001
+        env:
+        - name: APP_TYPE
+          value: "backend"
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5001
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5001
+          initialDelaySeconds: 5
+          periodSeconds: 3
+---
+# Backend Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+  namespace: chaos-demo
+spec:
+  selector:
+    app: backend
+  ports:
+  - port: 5001
+    targetPort: 5001
+  type: ClusterIP

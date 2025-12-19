@@ -1,0 +1,157 @@
+# HTTP Chaos Experiments
+# Modify HTTP requests/responses, inject delays, and return errors
+
+# NOTE: HTTPChaos requires the chaos-mesh sidecar to be injected into pods
+# Add annotation: chaos-mesh.org/inject: "true" to your pod spec
+
+---
+# Modify Response Body - Replace response content
+apiVersion: chaos-mesh.org/v1alpha1
+kind: HTTPChaos
+metadata:
+  name: http-response-body-modify
+  namespace: chaos-demo
+spec:
+  mode: all
+  selector:
+    namespaces:
+      - chaos-demo
+    labelSelectors:
+      app: backend
+  target: Response
+  port: 5001
+  path: "/data*"              # Match paths starting with /data
+  method: GET
+  replace:
+    body: '{"service":"backend","data":{"items":[],"total":0},"chaos":"injected","message":"Response modified by Yusuf Tayman"}'
+  duration: "3m"
+---
+# Modify Request Body - Change incoming POST data
+apiVersion: chaos-mesh.org/v1alpha1
+kind: HTTPChaos
+metadata:
+  name: http-request-body-modify
+  namespace: chaos-demo
+spec:
+  mode: all
+  selector:
+    namespaces:
+      - chaos-demo
+    labelSelectors:
+      app: backend
+  target: Request
+  port: 5001
+  path: "/process"
+  method: POST
+  replace:
+    body: '{"chaos_injected":true,"original_data":"replaced","timestamp":1234567890}'
+  duration: "3m"
+---
+# Patch Response Body - Add fields to JSON response
+apiVersion: chaos-mesh.org/v1alpha1
+kind: HTTPChaos
+metadata:
+  name: http-response-body-patch
+  namespace: chaos-demo
+spec:
+  mode: all
+  selector:
+    namespaces:
+      - chaos-demo
+    labelSelectors:
+      app: backend
+  target: Response
+  port: 5001
+  path: "/data"
+  method: GET
+  patch:
+    body:
+      type: JSON
+      value: '{"chaos_injected":true,"injection_time":"2024-01-01T00:00:00Z"}'
+  duration: "3m"
+---
+# Inject HTTP Delay - Add latency at HTTP level
+apiVersion: chaos-mesh.org/v1alpha1
+kind: HTTPChaos
+metadata:
+  name: http-delay-injection
+  namespace: chaos-demo
+spec:
+  mode: all
+  selector:
+    namespaces:
+      - chaos-demo
+    labelSelectors:
+      app: backend
+  target: Response
+  port: 5001
+  path: "*"
+  delay: "3s"                 # 3 second delay on all responses
+  duration: "3m"
+---
+# Return HTTP Error - Force 500 errors
+apiVersion: chaos-mesh.org/v1alpha1
+kind: HTTPChaos
+metadata:
+  name: http-error-500
+  namespace: chaos-demo
+spec:
+  mode: all
+  selector:
+    namespaces:
+      - chaos-demo
+    labelSelectors:
+      app: backend
+  target: Response
+  port: 5001
+  path: "/data"
+  method: GET
+  replace:
+    code: 500
+    body: '{"error":"Internal Server Error","chaos":"injected"}'
+    headers:
+      Content-Type: "application/json"
+  duration: "2m"
+---
+# Partial failure - 50% of requests fail
+apiVersion: chaos-mesh.org/v1alpha1
+kind: HTTPChaos
+metadata:
+  name: http-partial-failure
+  namespace: chaos-demo
+spec:
+  mode: all
+  selector:
+    namespaces:
+      - chaos-demo
+    labelSelectors:
+      app: backend
+  target: Response
+  port: 5001
+  path: "*"
+  replace:
+    code: 503
+    body: '{"error":"Service Unavailable"}'
+  percent: 50                 # Only affect 50% of requests
+  duration: "5m"
+---
+# Modify Headers
+apiVersion: chaos-mesh.org/v1alpha1
+kind: HTTPChaos
+metadata:
+  name: http-header-modify
+  namespace: chaos-demo
+spec:
+  mode: all
+  selector:
+    namespaces:
+      - chaos-demo
+    labelSelectors:
+      app: backend
+  target: Response
+  port: 5001
+  replace:
+    headers:
+      X-Chaos-Injected: "true"
+      X-Debug-Info: "chaos-mesh-experiment"
+  duration: "5m"

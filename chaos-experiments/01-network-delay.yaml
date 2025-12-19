@@ -1,0 +1,84 @@
+# Network Delay Experiment
+# Adds latency to network traffic between frontend and backend
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: network-delay-experiment
+  namespace: chaos-demo
+spec:
+  action: delay
+  mode: all
+  selector:
+    namespaces:
+      - chaos-demo
+    labelSelectors:
+      app: frontend
+  delay:
+    latency: "500ms"        # Add 500ms delay
+    correlation: "100"      # 100% correlation (consistent delay)
+    jitter: "100ms"         # ±100ms jitter
+  direction: to
+  target:
+    selector:
+      namespaces:
+        - chaos-demo
+      labelSelectors:
+        app: backend
+    mode: all
+  duration: "5m"            # Run for 5 minutes
+---
+# More aggressive delay - 2 second latency
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: network-delay-severe
+  namespace: chaos-demo
+spec:
+  action: delay
+  mode: all
+  selector:
+    namespaces:
+      - chaos-demo
+    labelSelectors:
+      app: frontend
+  delay:
+    latency: "2s"
+    correlation: "80"       # 80% of packets affected
+    jitter: "500ms"
+  direction: to
+  target:
+    selector:
+      namespaces:
+        - chaos-demo
+      labelSelectors:
+        app: backend
+    mode: all
+  duration: "3m"
+---
+# Bandwidth limitation
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: network-bandwidth-limit
+  namespace: chaos-demo
+spec:
+  action: bandwidth
+  mode: all
+  selector:
+    namespaces:
+      - chaos-demo
+    labelSelectors:
+      app: backend
+  bandwidth:
+    rate: "1mbps"           # Limit to 1 Mbps
+    limit: 100              # Queue limit in packets
+    buffer: 10000           # Buffer size in bytes
+  direction: to
+  target:
+    selector:
+      namespaces:
+        - chaos-demo
+      labelSelectors:
+        app: frontend
+    mode: all
+  duration: "5m"

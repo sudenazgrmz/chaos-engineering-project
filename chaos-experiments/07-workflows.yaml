@@ -1,0 +1,230 @@
+# Chaos Mesh Workflow
+# Run multiple chaos experiments in sequence or parallel
+
+---
+# Serial Workflow - Run experiments one after another
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Workflow
+metadata:
+  name: chaos-serial-workflow
+  namespace: chaos-demo
+spec:
+  entry: serial-entry
+  templates:
+    # Entry point - runs steps in sequence
+    - name: serial-entry
+      templateType: Serial
+      deadline: "15m"
+      children:
+        - network-delay-step
+        - pod-kill-step
+        - stress-step
+
+    # Step 1: Network delay
+    - name: network-delay-step
+      templateType: NetworkChaos
+      deadline: "3m"
+      networkChaos:
+        action: delay
+        mode: all
+        selector:
+          namespaces:
+            - chaos-demo
+          labelSelectors:
+            app: frontend
+        delay:
+          latency: "500ms"
+        direction: to
+        target:
+          selector:
+            namespaces:
+              - chaos-demo
+            labelSelectors:
+              app: backend
+          mode: all
+
+    # Step 2: Pod kill
+    - name: pod-kill-step
+      templateType: PodChaos
+      deadline: "2m"
+      podChaos:
+        action: pod-kill
+        mode: one
+        selector:
+          namespaces:
+            - chaos-demo
+          labelSelectors:
+            app: backend
+
+    # Step 3: CPU stress
+    - name: stress-step
+      templateType: StressChaos
+      deadline: "3m"
+      stressChaos:
+        mode: all
+        selector:
+          namespaces:
+            - chaos-demo
+          labelSelectors:
+            app: backend
+        stressors:
+          cpu:
+            workers: 1
+            load: 50
+
+---
+# Parallel Workflow - Run multiple experiments simultaneously
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Workflow
+metadata:
+  name: chaos-parallel-workflow
+  namespace: chaos-demo
+spec:
+  entry: parallel-entry
+  templates:
+    # Entry point - runs steps in parallel
+    - name: parallel-entry
+      templateType: Parallel
+      deadline: "5m"
+      children:
+        - parallel-delay
+        - parallel-stress
+
+    # Parallel step 1: Network delay
+    - name: parallel-delay
+      templateType: NetworkChaos
+      deadline: "3m"
+      networkChaos:
+        action: delay
+        mode: all
+        selector:
+          namespaces:
+            - chaos-demo
+          labelSelectors:
+            app: frontend
+        delay:
+          latency: "200ms"
+        direction: to
+        target:
+          selector:
+            namespaces:
+              - chaos-demo
+            labelSelectors:
+              app: backend
+          mode: all
+
+    # Parallel step 2: Memory stress
+    - name: parallel-stress
+      templateType: StressChaos
+      deadline: "3m"
+      stressChaos:
+        mode: all
+        selector:
+          namespaces:
+            - chaos-demo
+          labelSelectors:
+            app: backend
+        stressors:
+          memory:
+            workers: 1
+            size: "50Mi"
+
+---
+# Complex Workflow - Serial with embedded parallel
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Workflow
+metadata:
+  name: chaos-complex-workflow
+  namespace: chaos-demo
+spec:
+  entry: main
+  templates:
+    - name: main
+      templateType: Serial
+      deadline: "20m"
+      children:
+        - warmup
+        - chaos-phase
+        - recovery-check
+
+    # Warmup: Light delay to warm up
+    - name: warmup
+      templateType: NetworkChaos
+      deadline: "1m"
+      networkChaos:
+        action: delay
+        mode: all
+        selector:
+          namespaces:
+            - chaos-demo
+          labelSelectors:
+            app: frontend
+        delay:
+          latency: "100ms"
+        direction: to
+        target:
+          selector:
+            namespaces:
+              - chaos-demo
+            labelSelectors:
+              app: backend
+          mode: all
+
+    # Main chaos phase: Multiple experiments in parallel
+    - name: chaos-phase
+      templateType: Parallel
+      deadline: "5m"
+      children:
+        - heavy-delay
+        - cpu-stress
+
+    - name: heavy-delay
+      templateType: NetworkChaos
+      deadline: "3m"
+      networkChaos:
+        action: delay
+        mode: all
+        selector:
+          namespaces:
+            - chaos-demo
+          labelSelectors:
+            app: frontend
+        delay:
+          latency: "1s"
+          jitter: "200ms"
+        direction: to
+        target:
+          selector:
+            namespaces:
+              - chaos-demo
+            labelSelectors:
+              app: backend
+          mode: all
+
+    - name: cpu-stress
+      templateType: StressChaos
+      deadline: "3m"
+      stressChaos:
+        mode: all
+        selector:
+          namespaces:
+            - chaos-demo
+          labelSelectors:
+            app: backend
+        stressors:
+          cpu:
+            workers: 1
+            load: 70
+
+    # Recovery check: Kill a pod to test self-healing
+    - name: recovery-check
+      templateType: PodChaos
+      deadline: "2m"
+      podChaos:
+        action: pod-kill
+        mode: one
+        selector:
+          namespaces:
+            - chaos-demo
+          labelSelectors:
+            app: backend

@@ -1,0 +1,63 @@
+# Stress Chaos Experiments
+# CPU and Memory stress testing
+
+---
+# CPU Stress - High CPU load on backend pods
+apiVersion: chaos-mesh.org/v1alpha1
+kind: StressChaos
+metadata:
+  name: cpu-stress-backend
+  namespace: chaos-demo
+spec:
+  mode: all
+  selector:
+    namespaces:
+      - chaos-demo
+    labelSelectors:
+      app: backend
+  stressors:
+    cpu:
+      workers: 2              # Number of CPU stress workers
+      load: 80                # 80% CPU load per worker
+  duration: "3m"
+---
+# Memory Stress - Memory pressure on backend pods
+apiVersion: chaos-mesh.org/v1alpha1
+kind: StressChaos
+metadata:
+  name: memory-stress-backend
+  namespace: chaos-demo
+spec:
+  mode: all
+  selector:
+    namespaces:
+      - chaos-demo
+    labelSelectors:
+      app: backend
+  stressors:
+    memory:
+      workers: 1
+      size: "100Mi"           # Allocate 100Mi of memory
+  duration: "3m"
+---
+# Combined CPU and Memory Stress
+apiVersion: chaos-mesh.org/v1alpha1
+kind: StressChaos
+metadata:
+  name: combined-stress
+  namespace: chaos-demo
+spec:
+  mode: one                   # Stress one random pod
+  selector:
+    namespaces:
+      - chaos-demo
+    labelSelectors:
+      app: backend
+  stressors:
+    cpu:
+      workers: 1
+      load: 50
+    memory:
+      workers: 1
+      size: "50Mi"
+  duration: "5m"

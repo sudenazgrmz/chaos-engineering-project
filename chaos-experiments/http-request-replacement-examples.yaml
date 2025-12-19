@@ -1,0 +1,125 @@
+# ========================================
+# HTTP CHAOS - REQUEST REPLACEMENT EXAMPLES
+# ========================================
+
+---
+# Example 1: Replace POST Request Body
+# This intercepts POST requests to /process and replaces the entire body
+apiVersion: chaos-mesh.org/v1alpha1
+kind: HTTPChaos
+metadata:
+  name: replace-post-request
+  namespace: chaos-demo
+spec:
+  mode: all
+  selector:
+    namespaces:
+      - chaos-demo
+    labelSelectors:
+      app: backend
+  target: Request  # Target incoming requests
+  port: 5001
+  path: "/process"
+  method: POST
+  replace:
+    # Base64 encoded: {"chaos":"INJECTED","hacked":true,"count":999}
+    body: eyJjaGFvcyI6IklOSkVDVEVEIiwiaGFja2VkIjp0cnVlLCJjb3VudCI6OTk5fQ==
+  duration: "5m"
+
+---
+# Example 2: Replace Request Headers
+apiVersion: chaos-mesh.org/v1alpha1
+kind: HTTPChaos
+metadata:
+  name: replace-request-headers
+  namespace: chaos-demo
+spec:
+  mode: all
+  selector:
+    namespaces:
+      - chaos-demo
+    labelSelectors:
+      app: backend
+  target: Request
+  port: 5001
+  path: "/data"
+  method: GET
+  replace:
+    headers:
+      - X-Chaos-Injected: "true"
+      - User-Agent: "ChaosBot/1.0"
+      - X-Original-IP: "1.2.3.4"
+  duration: "5m"
+
+---
+# Example 3: Replace Response Body
+apiVersion: chaos-mesh.org/v1alpha1
+kind: HTTPChaos
+metadata:
+  name: replace-response-body
+  namespace: chaos-demo
+spec:
+  mode: all
+  selector:
+    namespaces:
+      - chaos-demo
+    labelSelectors:
+      app: backend
+  target: Response  # Target outgoing responses
+  port: 5001
+  path: "/data"
+  method: GET
+  replace:
+    # Base64 encoded: {"chaos":"Response Replaced!","data":"HACKED"}
+    body: eyJjaGFvcyI6IlJlc3BvbnNlIFJlcGxhY2VkISIsImRhdGEiOiJIQUNLRUQifQ==
+  duration: "5m"
+
+---
+# Example 4: Patch (Add to) Response Body
+apiVersion: chaos-mesh.org/v1alpha1
+kind: HTTPChaos
+metadata:
+  name: patch-response-json
+  namespace: chaos-demo
+spec:
+  mode: all
+  selector:
+    namespaces:
+      - chaos-demo
+    labelSelectors:
+      app: backend
+  target: Response
+  port: 5001
+  path: "/data"
+  method: GET
+  patch:
+    body:
+      type: JSON
+      # This adds new fields to the existing JSON response
+      value: '{"chaos_injected":true,"warning":"Data may be corrupted","injection_time":"2025-12-08T12:00:00Z"}'
+  duration: "5m"
+
+---
+# Example 5: Replace Request with Query Parameters
+apiVersion: chaos-mesh.org/v1alpha1
+kind: HTTPChaos
+metadata:
+  name: replace-with-query-params
+  namespace: chaos-demo
+spec:
+  mode: all
+  selector:
+    namespaces:
+      - chaos-demo
+    labelSelectors:
+      app: backend
+  target: Request
+  port: 5001
+  path: "/echo*"
+  method: GET
+  replace:
+    queries:
+      - chaos=injected
+      - tampered=true
+      - original=false
+  duration: "5m"

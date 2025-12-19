@@ -1,0 +1,61 @@
+# IO Chaos Experiments
+# Disk latency, errors, and attribute modifications
+
+---
+# IO Latency - Add disk read/write latency
+apiVersion: chaos-mesh.org/v1alpha1
+kind: IOChaos
+metadata:
+  name: io-latency-experiment
+  namespace: chaos-demo
+spec:
+  action: latency
+  mode: all
+  selector:
+    namespaces:
+      - chaos-demo
+    labelSelectors:
+      app: backend
+  volumePath: /app            # Path to inject IO chaos
+  delay: "100ms"              # 100ms IO latency
+  percent: 50                 # Affect 50% of IO operations
+  duration: "3m"
+---
+# IO Fault - Inject IO errors
+apiVersion: chaos-mesh.org/v1alpha1
+kind: IOChaos
+metadata:
+  name: io-fault-experiment
+  namespace: chaos-demo
+spec:
+  action: fault
+  mode: one
+  selector:
+    namespaces:
+      - chaos-demo
+    labelSelectors:
+      app: backend
+  volumePath: /app
+  errno: 5                    # EIO - Input/output error
+  percent: 10                 # 10% of IO operations fail
+  duration: "2m"
+---
+# IO Attribute Modification - Modify file attributes
+apiVersion: chaos-mesh.org/v1alpha1
+kind: IOChaos
+metadata:
+  name: io-attr-override
+  namespace: chaos-demo
+spec:
+  action: attrOverride
+  mode: all
+  selector:
+    namespaces:
+      - chaos-demo
+    labelSelectors:
+      app: backend
+  volumePath: /app
+  attr:
+    perm: 0                   # Remove all permissions
+  percent: 100
+  duration: "1m"
